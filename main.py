@@ -10,15 +10,14 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
+  # ലിങ്ക് ഓപ്പൺ ചെയ്ത് ബോട്ട് ഉണരുമ്പോൾ 6 സീരിയലുകളുടെയും ലേറ്റസ്റ്റ് ലിങ്കുകൾ വീണ്ടും ചെക്ക് ചെയ്ത് അയക്കും
   try:
     check_start()
     check_manoramamax_updates()
   except Exception as e:
     print(f"Web trigger error: {e}")
 
-  return (
-      "ManoramaMAX Bot is Running Live & Checked for New Episodes Successfully!"
-  )
+  return "ManoramaMAX Bot is Running Live & Checked Latest Episodes!"
 
 
 def run_web_server():
@@ -29,6 +28,7 @@ def run_web_server():
 BOT_TOKEN = os.environ.get("BOT_TOKEN")
 CHANNEL_ID = os.environ.get("CHANNEL_ID")
 
+# മനൊരമമാക്സിന്റെ ആ 6 സീരിയലുകൾ മാത്രം
 TARGET_SHOWS = [
     "https://www.manoramamax.com/programs/detail/20000068/ghm9gfw",
     "https://www.manoramamax.com/programs/detail/122743/marimayam",
@@ -39,43 +39,6 @@ TARGET_SHOWS = [
 ]
 
 LAST_OFFSET = None
-
-
-def get_channel_sent_links():
-  """ചാനലിൽ ഇതിനകം വന്ന ലിങ്കുകൾ ടെലഗ്രാമിൽ നിന്ന് തന്നെ പരിശോധിച്ചെടുക്കുന്നു"""
-  sent_links = set()
-  if not BOT_TOKEN or not CHANNEL_ID:
-    return sent_links
-
-  try:
-    # ടെലഗ്രാം ചാനലിലെ അവസാന അപ്ഡേറ്റുകൾ/പോസ്റ്റുകൾ പരിശോധിക്കാൻ (ചാനൽ അഡ്മിൻ പദവി ബോട്ടിന് വേണം)
-    url = f"https://api.telegram.org/bot{BOT_TOKEN}/getChat"
-    # ചാനൽ ആയതുകൊണ്ട് ഗെറ്റ് ചാറ്റ് വഴി നേരിട്ട് മെസ്സേജുകൾ എടുക്കാൻ കഴിഞ്ഞെന്ന് വരില്ല,
-    # അതിനായി ടെലഗ്രാം ചാനലിൽ ബോട്ട് പോസ്റ്റ് ചെയ്ത ലിങ്കുകൾ ഒരു ബാക്ക്അപ്പ് രീതിയിൽ സൂക്ഷിക്കാൻ
-    # അല്ലെങ്കിൽ ബോട്ടിലേക്ക് വരുന്ന അപ്ഡേറ്റുകൾ വഴിയാണ് സാധാരണ നോക്കുന്നത്.
-    # എന്നാൽ ഇവിടെ സിംപിൾ ആയി ഫയൽ റീഡിങ് പിഴവ് ഒഴിവാക്കാൻ സുരക്ഷിതമായ മാർഗ്ഗം ഉപയോഗിക്കാം.
-  except Exception as e:
-    print(f"Error fetching channel history: {e}")
-
-  # ഫയൽ വഴിയുള്ള രീതി തന്നെ സുരക്ഷിതമാക്കാൻ ഫയൽ ഇല്ലെങ്കിൽ ഓട്ടോമാറ്റിക് ഉണ്ടാക്കുന്ന കോഡ്:
-  sent_links_file = "sent_manoramamax_episodes.txt"
-  if os.path.exists(sent_links_file):
-    try:
-      with open(sent_links_file, "r") as f:
-        sent_links = set(f.read().splitlines())
-    except Exception:
-      pass
-  else:
-    # ഫയൽ ഇല്ലെങ്കിൽ പുതിയൊരെണ്ണം ക്രിയേറ്റ് ചെയ്യുന്നു
-    open(sent_links_file, "w").close()
-
-  return sent_links
-
-
-def save_sent_link(link):
-  sent_links_file = "sent_manoramamax_episodes.txt"
-  with open(sent_links_file, "a") as f:
-    f.write(link + "\n")
 
 
 def get_episode_details(episode_url, headers):
@@ -123,7 +86,6 @@ def send_telegram_post(photo_url, caption):
 
 
 def check_manoramamax_updates():
-  sent_links = get_channel_sent_links()
   headers = {
       "User-Agent": (
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
@@ -139,6 +101,7 @@ def check_manoramamax_updates():
         soup = BeautifulSoup(response.text, "html.parser")
         links = soup.find_all("a", href=True)
 
+        # ഓരോ ഷോ പേജിൽ നിന്നും ഏറ്റവും ആദ്യമായി കിട്ടുന്ന ലേറ്റസ്റ്റ് എപ്പിസോഡ് മാത്രം എടുക്കാൻ
         for a in links:
           href = a["href"]
           if "/detail/" in href or "/shows/" in href or "/episode" in href:
@@ -148,7 +111,7 @@ def check_manoramamax_updates():
                 else f"https://www.manoramamax.com{href}"
             )
 
-            if full_url not in sent_links and full_url not in TARGET_SHOWS:
+            if full_url != show_url:
               photo_url, title = get_episode_details(full_url, headers)
 
               url_parts = show_url.rstrip("/").split("/")
@@ -158,22 +121,22 @@ def check_manoramamax_updates():
                   else "ManoramaMAX Show"
               )
 
-              caption = f"""⎔ New Episode Released
+              caption = f"""⎔ **New Episode Released**
 
-│ Show: {show_name}
+│ Show: **{show_name}**
 ├─────────────────
 ├ Title: {title}
 ├ Platform: ManoramaMAX
 └ Status: Latest Episode Available
 
-➤ Watch Link:
+➤ **Watch Link:**
 {full_url}
 
 │ 🌟─────────────────🌟"""
 
               send_telegram_post(photo_url, caption)
-              save_sent_link(full_url)
               time.sleep(1)
+              break  # ആ ഷോയുടെ ഏറ്റവും പുതിയ ഒരു എപ്പിസോഡ് മാത്രം എടുത്ത് അടുത്ത ഷോയിലേക്ക് പോകും
     except Exception as e:
       print(f"Error checking show {show_url}: {e}")
 
@@ -214,4 +177,4 @@ if __name__ == "__main__":
   t = threading.Thread(target=bot_loop)
   t.start()
   run_web_server()
-    
+  
