@@ -5,12 +5,11 @@ from bs4 import BeautifulSoup
 from flask import Flask
 import requests
 
-app = Flask(name)
+app = Flask(__name__)
 
 
 @app.route("/")
 def home():
-  # ലിങ്ക് ഓപ്പൺ ചെയ്യുമ്പോൾ അല്ലെങ്കിൽ പിംഗ് ചെയ്യുമ്പോൾ ബാക്ക്ഗ്രൗണ്ടിൽ അപ്ഡേറ്റുകൾ ചെക്ക് ചെയ്യാൻ ട്രെഡ് ഉപയോഗിക്കുന്നു
   threading.Thread(target=check_manoramamax_updates).start()
   return "ManoramaMAX Bot is Running Live & Checked for Updates!"
 
@@ -182,12 +181,12 @@ def check_start():
 def bot_loop():
   while True:
     check_start()
-    # വെബ് സർവർ റൺ ചെയ്യുമ്പോൾ ഉള്ള ലൂപ്പിന് പുറമെ സമയബന്ധിതമായി ചെക്ക് ചെയ്യാനും വെച്ചിട്ടുണ്ട്
     check_manoramamax_updates()
     time.sleep(300)
 
 
-if name == "main":
+if __name__ == "__main__":
   t = threading.Thread(target=bot_loop)
   t.start()
   run_web_server()
+                       
