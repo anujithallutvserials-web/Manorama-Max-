@@ -10,8 +10,16 @@ app = Flask(__name__)
 
 @app.route("/")
 def home():
-  threading.Thread(target=check_manoramamax_updates).start()
-  return "ManoramaMAX Bot is Running Live & Checked for Updates!"
+  # ലിങ്ക് ഓപ്പൺ ചെയ്യുന്ന ആ നിമിഷം തന്നെ നേരിട്ട് അപ്ഡേറ്റുകൾ ചെക്ക് ചെയ്ത് അയക്കും
+  try:
+    check_start()
+    check_manoramamax_updates()
+  except Exception as e:
+    print(f"Web trigger error: {e}")
+
+  return (
+      "ManoramaMAX Bot is Running Live & Checked for New Episodes Successfully!"
+  )
 
 
 def run_web_server():
@@ -189,4 +197,4 @@ if __name__ == "__main__":
   t = threading.Thread(target=bot_loop)
   t.start()
   run_web_server()
-                       
+    
